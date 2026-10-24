@@ -1,0 +1,21 @@
+# Local workshop notes
+/cli_seminar.md
+
+# Credentials and local configuration
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+
+# Editor settings and temporary files
+.vscode/
+.idea/
+*.log
+*.tmp
+*~
+.DS_Store
+Thumbs.db
+node_modules/
