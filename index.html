@@ -192,6 +192,19 @@
     .stat { font-size: 12px; color: var(--muted); }
     .stat strong { display: block; font-size: 21px; color: var(--text); }
     .result .primary { min-width: 190px; }
+    .review { text-align: left; margin: 0 0 30px; }
+    .review h3 { margin: 0 0 12px; font-size: 20px; }
+    .review-empty { padding: 14px 16px; border-radius: 12px; background: var(--good-bg); color: var(--good); font-size: 14px; }
+    .review-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 12px; }
+    .review-item { padding: 16px; border: 1px solid var(--line); border-radius: 13px; background: var(--soft); font-size: 14px; }
+    .review-item h4 { margin: 0 0 10px; font-size: 15px; line-height: 1.5; overflow-wrap: anywhere; }
+    .review-item dl { margin: 0; display: grid; gap: 6px; }
+    .review-item dt { display: inline; font-weight: 750; }
+    .review-item dd { display: inline; margin: 0; overflow-wrap: anywhere; }
+    .review-item .row { display: block; }
+    .review-item .row-wrong dt { color: var(--bad); }
+    .review-item .row-right dt { color: var(--good); }
+    .review-item .row-note { color: var(--muted); }
     .noscript { padding: 20px; border: 1px solid var(--bad); border-radius: 12px; color: var(--bad); background: var(--bad-bg); }
     @keyframes shake {
       0%, 100% { transform: translateX(0); }
@@ -272,6 +285,11 @@
             <div class="stat">맞힌 문제<strong id="correct-count"></strong></div>
             <div class="stat">정답률<strong id="accuracy"></strong></div>
           </div>
+          <section class="review" aria-labelledby="review-title">
+            <h3 id="review-title">오답 복습</h3>
+            <p class="review-empty" id="review-empty" hidden>틀린 문제가 없어요. 복습할 오답이 없습니다!</p>
+            <ol class="review-list" id="review-list"></ol>
+          </section>
           <button class="primary" id="restart" type="button">다시 탐사하기 <span aria-hidden="true">↗</span></button>
         </section>
       </div>
@@ -362,6 +380,36 @@
     let current = 0;
     let score = 0;
     let answered = false;
+    let records = [];
+
+    function renderReview() {
+      const wrong = records.filter((record) => record.selected !== record.item.correct);
+      $("review-empty").hidden = wrong.length > 0;
+      $("review-list").replaceChildren(...wrong.map((record) => {
+        const { item, selected, number } = record;
+        const li = document.createElement("li");
+        li.className = "review-item";
+        const title = document.createElement("h4");
+        title.textContent = `${number}번 문제 · ${item.question}`;
+        const list = document.createElement("dl");
+        [
+          ["row-wrong", "✕ 내가 선택한 답(오답): ", item.options[selected]],
+          ["row-right", "✓ 정답: ", item.options[item.correct]],
+          ["row-note", "해설: ", item.explanation]
+        ].forEach(([cls, label, value]) => {
+          const row = document.createElement("div");
+          row.className = `row ${cls}`;
+          const dt = document.createElement("dt");
+          dt.textContent = label;
+          const dd = document.createElement("dd");
+          dd.textContent = value;
+          row.append(dt, dd);
+          list.append(row);
+        });
+        li.append(title, list);
+        return li;
+      }));
+    }
 
     function updateProgress(completed) {
       $("score").textContent = score;
@@ -416,6 +464,7 @@
       const item = questions[current];
       const correct = index === item.correct;
       if (correct) score += 10;
+      records.push({ item, selected: index, number: current + 1 });
       const buttons = [...answers.children];
       buttons.forEach((button) => button.setAttribute("aria-disabled", "true"));
       markAnswer(buttons[item.correct], true, correct);
@@ -480,6 +529,7 @@
       animateScore(score);
       $("correct-count").textContent = `${score / 10} / ${questions.length}`;
       $("accuracy").textContent = `${score}%`;
+      renderReview();
       $("result-title").focus();
     }
 
@@ -497,6 +547,8 @@
       scoreAnimation = null;
       current = 0;
       score = 0;
+      records = [];
+      $("review-list").replaceChildren();
       $("result").hidden = true;
       quiz.hidden = false;
       renderQuestion();
